@@ -16,6 +16,7 @@ gnFail(const char *fname, const char *msg, const char *arg, const char *name)
         fprintf(stderr, " offending text: %s\n", arg);
     exit(EXIT_FAILURE);
 }
+
 static long
 getNum(const char *fname, const char *arg, int flags, const char *name)
 {
@@ -39,10 +40,12 @@ getNum(const char *fname, const char *arg, int flags, const char *name)
         gnFail(fname, "value must be > 0", arg, name);
     return res;
 }
+
 long getLong(const char *arg, int flags, const char *name)
 {
     return getNum("getLong", arg, flags, name);
 }
+
 int getInt(const char *arg, int flags, const char *name)
 {
     long res;
