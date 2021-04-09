@@ -85,6 +85,8 @@ int main(int argc, char *argv[])
 
     /* Parent comes here: wait for SIGCHLD until all children are dead */
     sigemptyset(&emptyMask);
+    // 这里写法非常像线程的条件变量，其实前面先对 SIGCHLD 进行阻塞，就是相当于多线程中的上锁
+    // 避免在 sigsuspend 前，子线程结束出发 signal handler 更改 numLiveChildren 变量
     while (numLiveChildren > 0)
     {
         if (sigsuspend(&emptyMask) == -1 && errno != EINTR)
