@@ -4,12 +4,14 @@
 #include "curr_time.h"
 #include "tlpi_hdr.h"
 
+// signal handler 会更新，因此必须为 volatile
 static volatile int numLiveChildren = 0;
 
 // 该程序的意图：如果父进程在主干上调用 wait，有多个可能：
 // 1. 在父进程 wait 前，子进程就死了，变成 zombie 进程，直到父进程执行到 wait
 // 2. 父进程调用 wait，子进程一直没退出，则父进程一直阻塞着，干不了其他事
 // 比较好的方法：父进程设置接受 SIGCHLD 的 signal handler，在 handler 中调用 wait 
+
 
 /* Number of children started but not yet waited on */
 static void
@@ -22,6 +24,9 @@ sigchldHandler(int sig)
     savedErrno = errno; /* In case we modify 'errno' */
     printf("%s handler: Caught SIGCHLD\n", currTime("%T"));
 
+    // 细节：由于 signal 不是队列，因此可能父进程在 suspend 前，多个子进程就结束了
+    // 但是最后还是只会调用一次 signal handler，所以需要循环 wait 子进程
+    // 第一个参数 -1: meaning wait for any child process.
     while ((childPid = waitpid(-1, &status, WNOHANG)) > 0)
     {
         printf("%s handler: Reaped child %ld - ", currTime("%T"),
