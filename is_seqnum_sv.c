@@ -5,8 +5,8 @@
 #define BACKLOG 50
 
 // allocating unique sequence numbers (or ranges of sequence numbers) to clients.
-// 当了解一下 getaddrinfo 等函数怎么使用吧 (感觉这个例子为了使用而使用啊？)
-// usage: ./seq_server init_num 
+// 当了解一下 getaddrinfo 等函数怎么使用吧
+// usage: ./seq_server [init_num]
 
 int main(int argc, char *argv[])
 {
@@ -25,7 +25,8 @@ int main(int argc, char *argv[])
     if (argc > 1 && strcmp(argv[1], "--help") == 0)
         usageErr("%s [init-seq-num]\n", argv[0]);
     seqNum = (argc > 1) ? getInt(argv[1], 0, "init-seq-num") : 0;
-    // ignore sigpipe 信号，通过检查 EPIPE 来判断是否 write 失败了
+
+    // ignore sigpipe 信号，可以通过检查 EPIPE 来判断是否 write 失败了
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
         errExit("signal");
     /* Call getaddrinfo() to obtain a list of addresses that
@@ -41,10 +42,11 @@ int main(int argc, char *argv[])
     if (getaddrinfo(NULL, PORT_NUM, &hints, &result) != 0)
         errExit("getaddrinfo");
     /* Walk through returned list until we find an address structure
- that can be used to successfully create and bind a socket */
+    that can be used to successfully create and bind a socket */
     optval = 1;
     for (rp = result; rp != NULL; rp = rp->ai_next)
     {
+        // 标准 socket() bind() 环节，只是参数都通过 rp 来填
         lfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
         if (lfd == -1)
             continue; /* On error, try next address */
@@ -65,7 +67,7 @@ int main(int argc, char *argv[])
     freeaddrinfo(result);
 
     for (;;)
-    { /* Handle clients iteratively */
+    {   /* Handle clients iteratively */
         /* Accept a client connection, obtaining client's address */
         addrlen = sizeof(struct sockaddr_storage);
         cfd = accept(lfd, (struct sockaddr *)&claddr, &addrlen);
@@ -74,12 +76,15 @@ int main(int argc, char *argv[])
             errMsg("accept");
             continue;
         }
+
+        // 得到客户端的 addr 信息（通过 host 和 service 拼接）
         if (getnameinfo((struct sockaddr *)&claddr, addrlen,
                         host, NI_MAXHOST, service, NI_MAXSERV, 0) == 0)
             snprintf(addrStr, ADDRSTRLEN, "(%s, %s)", host, service);
         else
             snprintf(addrStr, ADDRSTRLEN, "(?UNKNOWN?)");
         printf("Connection from %s\n", addrStr);
+
         /* Read client request, send sequence number back */
         if (readLine(cfd, reqLenStr, INT_LEN) <= 0)
         {
